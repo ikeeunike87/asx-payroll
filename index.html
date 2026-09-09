@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ASX Premium - Sistem Penggajian CV. Aditama Surya EEXPRESS</title>
+  <title>ASX Premium - Sistem Penggajian CV. Aditama Surya Express</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -32,7 +32,7 @@
           <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIbGNtcwIQAABtbnRyUkdCIFhZWiAH4gADABQACQAOAB1h" alt="ASX" class="w-full h-full object-contain" id="login-logo" style="display:none">
           <div id="login-logo-fallback" class="w-full h-full bg-[#0A1931] rounded-xl flex items-center justify-center text-white font-bold text-xl">ASX</div>
         </div>
-        <h1 class="font-display font-bold text-xl text-slate-900">CV. ADITAMA SURYA EEXPRESS</h1>
+        <h1 class="font-display font-bold text-xl text-slate-900">CV. ADITAMA SURYA EXPRESS</h1>
         <p class="text-xs text-slate-500 mt-1">Sistem Penggajian Premium - Login HRD</p>
         <div class="mt-4 inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-800 text-[11px] px-3 py-1.5 rounded-full">
           <span>🔒</span> Akses terbatas - Hanya HRD & Direktur
@@ -382,7 +382,7 @@
       const logoSrc = document.querySelector('header img') ? document.querySelector('header img').src : '';
       const slipInner = `
           <div class="slip-paper">
-            <div class="header"><img src="${logoSrc}" class="logo"><div class="company"><div style="font-weight:bold; font-size:14px;">CV. Aditama Surya EXPRESS</div><div>Jl. Tanjung Wojo, Bangunharjo, Sewon, Bantul, Yogyakarta</div><div>Yogyakarta</div></div></div>
+            <div class="header"><img src="${logoSrc}" class="logo"><div class="company"><div style="font-weight:bold; font-size:14px;">CV. Aditama Surya Express</div><div>Jl. Tanjung Wojo, Bangunharjo, Sewon, Bantul, Yogyakarta</div><div>Yogyakarta</div></div></div>
             <div class="title">SLIP GAJI</div><div style="margin-bottom:12px;">Periode: <b>${bulanNama}</b></div>
             <table class="info"><tr><td style="width:140px;">Nama</td><td>: ${emp.nama}</td></tr><tr><td>NIK</td><td>: ${emp.nik}</td></tr><tr><td>Jabatan</td><td>: ${emp.jabatan}</td></tr><tr><td>No Rekening BCA</td><td>: ${emp.rek}</td></tr></table>
             <div class="section"><div class="section-title">Penerimaan</div>
