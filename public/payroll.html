@@ -15,6 +15,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
   <style>
     :root{--navy:#0A1931;--navy-light:#162E5E;--blue-accent:#1E3A8A;}
@@ -46,8 +47,8 @@
       </div>
       <form onsubmit="handleLogin(event)" class="px-8 pb-8 space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Username</label>
-          <input id="login-user" type="text" required placeholder="admin" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0A1931]/20 focus:border-[#0A1931]" autocomplete="username">
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Email</label>
+          <input id="login-user" type="email" required placeholder="email@perusahaan.com" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0A1931]/20 focus:border-[#0A1931]" autocomplete="email">
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1.5">Password</label>
@@ -145,71 +146,44 @@
   <script>
 
     // === AUTH SYSTEM ===
-    const ALLOWED_USERS = [
-      { user: 'admin', pass: 'asx2026', role: 'Direktur', name: 'Aditya Surya' },
-      { user: 'hrd', pass: 'hrd2026', role: 'HRD', name: 'Eunike' },
-      { user: 'eunike', pass: 'asx123', role: 'ADH', name: 'Eunike' },
-    ];
-
-    function checkAuth(){
-      const auth = localStorage.getItem('asx_auth');
-      if(!auth){
-        document.getElementById('login-screen').classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-        return false;
-      }
-      try{
-        const data = JSON.parse(auth);
-        // cek expired 7 hari
-        if(Date.now() - data.timestamp > 7*24*60*60*1000){
-          logout();
-          return false;
-        }
-        document.getElementById('login-screen').classList.add('hidden');
-        document.body.style.overflow = '';
-        const badge = document.getElementById('user-badge');
-        const badgeName = document.getElementById('user-badge-name');
-        if(badge && badgeName){
-          badge.classList.remove('hidden');
-          badgeName.textContent = data.name + ' (' + data.role + ')';
-        }
-        // copy logo from header to login if available
-        // Logo sudah embed langsung, tidak perlu copy dari header
-        return true;
-      }catch(e){
-        logout();
-        return false;
+    function setAuthUI(user){
+      const loggedIn = !!user;
+      document.getElementById('login-screen').classList.toggle('hidden', loggedIn);
+      document.body.style.overflow = loggedIn ? '' : 'hidden';
+      const badge = document.getElementById('user-badge');
+      const badgeName = document.getElementById('user-badge-name');
+      if(badge && badgeName){
+        badge.classList.toggle('hidden', !loggedIn);
+        if(loggedIn) badgeName.textContent = user.email || 'User Payroll';
       }
     }
 
-    function handleLogin(e){
+    function checkAuth(){
+      const user = firebase.apps.length ? firebase.auth().currentUser : null;
+      setAuthUI(user);
+      return !!user;
+    }
+
+    async function handleLogin(e){
       e.preventDefault();
-      const u = document.getElementById('login-user').value.trim().toLowerCase();
-      const p = document.getElementById('login-pass').value;
+      const email = document.getElementById('login-user').value.trim();
+      const password = document.getElementById('login-pass').value;
       const err = document.getElementById('login-error');
-      const found = ALLOWED_USERS.find(x=> x.user===u && x.pass===p);
-      if(found){
-        localStorage.setItem('asx_auth', JSON.stringify({ user: found.user, name: found.name, role: found.role, timestamp: Date.now() }));
+      try{
+        await firebase.auth().signInWithEmailAndPassword(email, password);
         err.classList.add('hidden');
-        document.getElementById('login-screen').classList.add('hidden');
-        document.body.style.overflow = '';
-        checkAuth();
-        // render ulang setelah login
-        renderAll();
-      }else{
-        err.textContent = 'Username atau password salah! Hubungi Direktur.';
+      }catch(error){
+        console.error('Firebase login error', error.code);
+        err.textContent = 'Email atau password tidak valid.';
         err.classList.remove('hidden');
       }
     }
 
-    function logout(){
-      localStorage.removeItem('asx_auth');
-      document.getElementById('login-screen').classList.remove('hidden');
-      document.body.style.overflow = 'hidden';
+    async function logout(){
+      try{ await firebase.auth().signOut(); }
+      catch(e){ console.error('Firebase logout error', e); }
       document.getElementById('login-user').value='';
       document.getElementById('login-pass').value='';
-      const badge = document.getElementById('user-badge');
-      if(badge) badge.classList.add('hidden');
     }
 
 
@@ -266,7 +240,7 @@
     document.getElementById('filter-periode').value = currentMonthStr;
     const formatRp = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num || 0);
     const formatRpShort = (num) => { if(num>=1000000) return 'Rp ' + (num/1000000).toFixed(1) + 'jt'; return formatRp(num); };
-    document.addEventListener('DOMContentLoaded', () => { checkAuth(); initFirebaseFromStorage(); renderAll(); setupLivePreview(); });
+    document.addEventListener('DOMContentLoaded', () => { initFirebaseFromStorage(); renderAll(); setupLivePreview(); });
     function renderAll(){ renderKaryawan(); renderRekapGaji(); renderKasbon(); }
     function switchTab(tab){ ['karyawan','rekap','kasbon'].forEach(t=>{ document.getElementById('modul-'+t).classList.add('hidden'); document.getElementById('tab-'+t).classList.remove('nav-active'); document.getElementById('tab-'+t).classList.add('text-slate-600','hover:bg-slate-50'); }); document.getElementById('modul-'+tab).classList.remove('hidden'); document.getElementById('tab-'+tab).classList.add('nav-active'); document.getElementById('tab-'+tab).classList.remove('text-slate-600'); }
     function closeModal(id){ document.getElementById(id).classList.add('hidden'); }
@@ -295,12 +269,11 @@
             <div class="flex gap-2 mt-4"><button onclick="editKaryawan(${realIdx})" class="flex-1 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold">Edit</button><button onclick="deleteKaryawan('${emp.nik}')" class="flex-1 py-2 border border-slate-200 rounded-xl text-xs font-semibold">Hapus</button></div>
           </div>`;
       });
-      saveAndSync();
     }
     function openFormKaryawan(){ document.getElementById('form-karyawan').reset(); document.getElementById('emp-id').value=''; document.getElementById('modal-karyawan-title').innerText='Tambah Data Karyawan'; document.getElementById('modal-karyawan').classList.remove('hidden'); }
     function editKaryawan(idx){ const emp=employees[idx]; document.getElementById('emp-id').value=idx; document.getElementById('emp-nik').value=emp.nik; document.getElementById('emp-nama').value=emp.nama; document.getElementById('emp-jabatan').value=emp.jabatan; document.getElementById('emp-rek').value=emp.rek; document.getElementById('emp-gapok').value=emp.gapok; document.getElementById('emp-status').value=emp.status; document.getElementById('emp-tgl').value=emp.tgl; document.getElementById('modal-karyawan-title').innerText='Edit Data Karyawan'; document.getElementById('modal-karyawan').classList.remove('hidden'); }
-    function saveKaryawan(e){ e.preventDefault(); const idx=document.getElementById('emp-id').value; const data={ nik:document.getElementById('emp-nik').value.trim(), nama:document.getElementById('emp-nama').value.trim(), jabatan:document.getElementById('emp-jabatan').value.trim(), rek:document.getElementById('emp-rek').value.trim(), gapok:parseFloat(document.getElementById('emp-gapok').value)||0, status:document.getElementById('emp-status').value, tgl:document.getElementById('emp-tgl').value, kasbon: idx!==''?employees[idx].kasbon:0 }; if(idx==='') employees.push(data); else employees[idx]={...employees[idx],...data}; closeModal('modal-karyawan'); renderAll(); }
-    function deleteKaryawan(nik){ if(confirm('Hapus karyawan '+nik+'?')){ employees=employees.filter(e=>e.nik!==nik); renderAll(); } }
+    function saveKaryawan(e){ e.preventDefault(); const idx=document.getElementById('emp-id').value; const data={ nik:document.getElementById('emp-nik').value.trim(), nama:document.getElementById('emp-nama').value.trim(), jabatan:document.getElementById('emp-jabatan').value.trim(), rek:document.getElementById('emp-rek').value.trim(), gapok:parseFloat(document.getElementById('emp-gapok').value)||0, status:document.getElementById('emp-status').value, tgl:document.getElementById('emp-tgl').value, kasbon: idx!==''?employees[idx].kasbon:0 }; if(idx==='') employees.push(data); else employees[idx]={...employees[idx],...data}; closeModal('modal-karyawan'); saveAndSync(); renderAll(); }
+    function deleteKaryawan(nik){ if(confirm('Hapus karyawan '+nik+'?')){ employees=employees.filter(e=>e.nik!==nik); saveAndSync(); renderAll(); } }
     function renderRekapGaji(){
       const periode=document.getElementById('filter-periode').value || currentMonthStr;
       if(!payrollRecords[periode]) payrollRecords[periode]={};
@@ -331,7 +304,6 @@
       document.getElementById('stat-total-bon').innerText=formatRpShort(totalBonBerjalan);
       document.getElementById('stat-total-thp').innerText=formatRpShort(grandTHP);
       document.getElementById('stat-total-karyawan').innerText=employees.length;
-      saveAndSync();
     }
     function openFormGaji(nik){
       const emp=employees.find(e=>e.nik===nik);
@@ -369,7 +341,7 @@
       payrollRecords[periode][nik]={ thr:parseFloat(document.getElementById('gaji-thr').value)||0, bonBerjalan:parseFloat(document.getElementById('gaji-bon-berjalan').value)||0, potBon:parseFloat(document.getElementById('gaji-pot-bon').value)||0, pph21:parseFloat(document.getElementById('gaji-pph21').value)||0 };
       const emp=employees.find(e=>e.nik===nik);
       if(emp) emp.kasbon=Math.max(0, payrollRecords[periode][nik].bonBerjalan - payrollRecords[periode][nik].potBon);
-      closeModal('modal-gaji'); renderAll();
+      closeModal('modal-gaji'); saveAndSync(); renderAll();
     }
     
     let currentSlipHTMLForPrint = '';
@@ -696,44 +668,60 @@
       });
     }
     function openFormKasbon(selectedNik=''){ const sel=document.getElementById('kasbon-nik'); sel.innerHTML=''; employees.forEach(emp=>{ sel.innerHTML+=`<option value="${emp.nik}" ${emp.nik===selectedNik?'selected':''}>${emp.nik} - ${emp.nama}</option>`; }); document.getElementById('kasbon-nominal').value=''; document.getElementById('modal-kasbon').classList.remove('hidden'); }
-    function saveKasbon(e){ e.preventDefault(); const nik=document.getElementById('kasbon-nik').value; const jenis=document.getElementById('kasbon-jenis').value; const nominal=parseFloat(document.getElementById('kasbon-nominal').value)||0; const emp=employees.find(e=>e.nik===nik); if(emp){ if(jenis==='tambah') emp.kasbon+=nominal; else emp.kasbon=Math.max(0, emp.kasbon-nominal); } const periode=document.getElementById('filter-periode').value || currentMonthStr; if(!payrollRecords[periode]) payrollRecords[periode]={}; if(!payrollRecords[periode][nik]) payrollRecords[periode][nik]={ thr:0, bonBerjalan:0, potBon:0, pph21:0 }; if(jenis==='tambah') payrollRecords[periode][nik].bonBerjalan+=nominal; closeModal('modal-kasbon'); renderAll(); }
+    function saveKasbon(e){ e.preventDefault(); const nik=document.getElementById('kasbon-nik').value; const jenis=document.getElementById('kasbon-jenis').value; const nominal=parseFloat(document.getElementById('kasbon-nominal').value)||0; const emp=employees.find(e=>e.nik===nik); if(emp){ if(jenis==='tambah') emp.kasbon+=nominal; else emp.kasbon=Math.max(0, emp.kasbon-nominal); } const periode=document.getElementById('filter-periode').value || currentMonthStr; if(!payrollRecords[periode]) payrollRecords[periode]={}; if(!payrollRecords[periode][nik]) payrollRecords[periode][nik]={ thr:0, bonBerjalan:0, potBon:0, pph21:0 }; if(jenis==='tambah') payrollRecords[periode][nik].bonBerjalan+=nominal; closeModal('modal-kasbon'); saveAndSync(); renderAll(); }
     function openFirebaseModal(){ document.getElementById('modal-firebase').classList.remove('hidden'); }
     function saveFirebaseConfig(){ try{ const cfg=JSON.parse(document.getElementById('firebase-config-input').value); localStorage.setItem('asx_firebase_config', JSON.stringify(cfg)); location.reload(); }catch(err){ alert('Format JSON tidak valid!'); } }
+    let payrollListenerAttached = false;
+    function attachPayrollListener(){
+      if(payrollListenerAttached || !db) return;
+      payrollListenerAttached = true;
+      db.ref('asx_payroll_system_v2').on('value',snap=>{
+        const val=snap.val();
+        if(val && val.employees){
+          employees=val.employees;
+          payrollRecords=val.payrollRecords||payrollRecords;
+          localStorage.setItem('asx_employees_v2', JSON.stringify(employees));
+          localStorage.setItem('asx_payroll_v2', JSON.stringify(payrollRecords));
+          renderAll();
+          console.log('Sync OK');
+        }
+      }, error=>{
+        console.error('Firebase read error', error);
+        document.getElementById('firebase-status').innerHTML='● Akses database ditolak';
+        document.getElementById('firebase-status').className='text-[10px] md:text-xs bg-red-500 text-white px-2.5 py-1 rounded-full font-semibold';
+      });
+    }
+
     function initFirebaseFromStorage(){
       try{
-        // Pakai config FINAL payroll-asx, tapi tetap support override dari localStorage kalau ada
         let config = firebaseConfig;
         const saved = localStorage.getItem('asx_firebase_config');
         if(saved){ try{ const parsed = JSON.parse(saved); if(parsed.apiKey) config = parsed; } catch(e){} }
-        if(!firebase.apps.length){
-          firebase.initializeApp(config);
-        }
+        if(!firebase.apps.length) firebase.initializeApp(config);
         db = firebase.database();
-        document.getElementById('firebase-status').innerHTML='● Online Firebase - payroll-asx';
-        document.getElementById('firebase-status').className='text-[10px] md:text-xs bg-emerald-500 text-white px-2.5 py-1 rounded-full font-semibold';
-        db.ref('asx_payroll_system_v2').on('value',snap=>{
-          const val=snap.val();
-          if(val && val.employees){
-            employees=val.employees;
-            payrollRecords=val.payrollRecords||payrollRecords;
-            renderAll();
-            console.log('Sync OK');
+
+        firebase.auth().onAuthStateChanged(user=>{
+          setAuthUI(user);
+          if(user){
+            attachPayrollListener();
           } else {
-            console.log('DB kosong, push data awal Agustus 2026');
-            saveAndSync();
+            document.getElementById('firebase-status').innerHTML='● Login diperlukan';
+            document.getElementById('firebase-status').className='text-[10px] md:text-xs bg-amber-500 text-white px-2.5 py-1 rounded-full font-semibold';
           }
         });
+
         db.ref('.info/connected').on('value', s=>{
-          if(s.val()===true){
+          const user=firebase.auth().currentUser;
+          if(s.val()===true && user){
             document.getElementById('firebase-status').innerHTML='● Online - Terhubung';
             document.getElementById('firebase-status').className='text-[10px] md:text-xs bg-emerald-500 text-white px-2.5 py-1 rounded-full font-semibold';
-          } else {
+          } else if(user) {
             document.getElementById('firebase-status').innerHTML='● Mencoba konek...';
           }
         });
       }catch(e){
         console.error('Firebase init error', e);
-        document.getElementById('firebase-status').innerHTML='● Error - Cek Rules';
+        document.getElementById('firebase-status').innerHTML='● Error Firebase';
         document.getElementById('firebase-status').className='text-[10px] md:text-xs bg-red-500 text-white px-2.5 py-1 rounded-full font-semibold';
       }
     }
